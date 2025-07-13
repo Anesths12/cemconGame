@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎯 Τροχός Ερωτήσεων</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-image: url('https://i.postimg.cc/kgyM89HD/cemcon.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      min-height: 100vh;
+      margin: 0;
+      color: white;
+    }
+
+    h2 {
+      text-align: center;
+      color: white;
+    }
+
+    .wheel-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    canvas {
+      margin-top: 20px;
+    }
+
+    .pointer {
+      width: 0; 
+      height: 0; 
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-bottom: 30px solid red;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%) rotate(180deg);
+      z-index: 10;
+    }
+
+    #spin {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #28a745;
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    #spin:hover {
+      background-color: #218838;
+    }
+
+    #questionBox, #choicesBox, #result {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .choice {
+      display: block;
+      padding: 10px;
+      margin: 10px auto;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      width: 90%;
+      background-color: #e9ecef;
+      color: black;
+      cursor: pointer;
+      max-width: 400px;
+    }
+
+    .choice:hover {
+      background-color: #d4edda;
+    }
+
+    #confetti-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+  <h2>🎯 Τροχός Ερωτήσεων</h2>
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="400" height="400"></canvas>
+  </div>
+  <button id="spin">Γύρνα τον Τροχό</button>
+  <div id="questionBox"></div>
+  <div id="choicesBox"></div>
+  <div id="result"></div>
+  <canvas id="confetti-canvas"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+  <script>
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    const size = canvas.width;
+    const center = size / 2;
+    let currentAngle = 0;
+
+    const questions = [
+      {
+        label: "Ανανεώσιμη Ενέργεια",
+        question: "Ποια ενέργεια είναι ανανεώσιμη;",
+        choices: ["Ηλιακή", "Πετρέλαιο", "Φυσικό αέριο", "Άνθρακας"],
+        correct: 0
+      },
+      {
+        label: "Εξοικονομώ",
+        question: "Τι κάνει το πρόγραμμα 'Εξοικονομώ';",
+        choices: ["Χρηματοδοτεί σπουδές", "Επιδοτεί ενεργειακές παρεμβάσεις κατοικιών", "Κατασκευάζει νέες πολυκατοικίες", "Παρέχει δωρεάν τρόφιμα"],
+        correct: 1
+      },
+      {
+        label: "Καθαρό Καύσιμο",
+        question: "Ποιο καύσιμο θεωρείται το πιο καθαρό για οικιακή χρήση;",
+        choices: ["Ξύλο", "Πετρέλαιο", "Φυσικό αέριο", "Κάρβουνο"],
+        correct: 2
+      },
+      {
+        label: "Εξοικονομώ 2",
+        question: "Ποια είναι μία βασική προϋπόθεση για να μπει κάποιος στο 'Εξοικονομώ';",
+        choices: ["Να έχει ιδιοκτησία κατοικίας", "Να μένει σε ενοίκιο", "Να εργάζεται σε δημόσιο", "Να έχει αυτοκίνητο"],
+        correct: 0
+      },
+      {
+        label: "Εξοικονόμηση Ενέργειας",
+        question: "Ποια επιλογή βοηθά περισσότερο στην εξοικονόμηση ενέργειας;",
+        choices: ["Χρήση στεγνωτηρίου ρούχων", "Μαγείρεμα με γκάζι", "Αντικατάσταση λαμπτήρων με LED", "Άνοιγμα παραθύρων το χειμώνα"],
+        correct: 2
+      },
+      {
+        label: "Λέβητας",
+        question: "Ποια τεχνολογία μειώνει τη χρήση λέβητα πετρελαίου;",
+        choices: ["Θερμαντικά σώματα", "Ηλιακός θερμοσίφωνας", "Αντλία θερμότητας", "Φούρνος μικροκυμάτων"],
+        correct: 2
+      },
+      {
+        label: "Φωτοβολταϊκά",
+        question: "Ποιο είναι το βασικό πλεονέκτημα των φωτοβολταϊκών;",
+        choices: ["Παράγουν ζεστό νερό", "Παράγουν ηλεκτρική ενέργεια από τον ήλιο", "Καθαρίζουν τον αέρα", "Ρυθμίζουν τη θερμοκρασία του σπιτιού"],
+        correct: 1
+      },
+      {
+        label: "Θερμομόνωση",
+        question: "Ποιο υλικό χρησιμοποιείται συχνά για θερμομόνωση τοίχων;",
+        choices: ["Σκυρόδεμα", "Πολυουρεθάνη", "Αλουμίνιο", "Μολύβι"],
+        correct: 1
+      }
+    ];
+
+    function drawWheel() {
+      const sliceAngle = 2 * Math.PI / questions.length;
+      questions.forEach((q, i) => {
+        const angle = i * sliceAngle + currentAngle;
+        ctx.beginPath();
+        ctx.moveTo(center, center);
+        ctx.arc(center, center, center, angle, angle + sliceAngle);
+        ctx.fillStyle = `hsl(${i * 360 / questions.length}, 80%, 80%)`;
+        ctx.fill();
+        ctx.save();
+        ctx.translate(center, center);
+        ctx.rotate(angle + sliceAngle / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "black";
+        ctx.font = "16px sans-serif";
+        ctx.fillText(q.label, center - 10, 10);
+        ctx.restore();
+      });
+    }
+
+    function spinWheel() {
+      const selectedIndex = Math.floor(Math.random() * questions.length);
+      const anglePerSlice = 2 * Math.PI / questions.length;
+      const sliceMiddleOffset = anglePerSlice / 2;
+      const targetAngle = (3 * Math.PI / 2) - (selectedIndex * anglePerSlice + sliceMiddleOffset);
+      const fullSpins = 5 * 2 * Math.PI;
+      const finalAngle = fullSpins + targetAngle;
+
+      let start = null;
+      function animate(timestamp) {
+        if (!start) start = timestamp;
+        const progress = timestamp - start;
+        const duration = 3000;
+        const ease = t => 1 - Math.pow(1 - t, 3);
+        const t = Math.min(progress / duration, 1);
+        currentAngle = ease(t) * finalAngle;
+        ctx.clearRect(0, 0, size, size);
+        drawWheel();
+
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          currentAngle = targetAngle;
+          ctx.clearRect(0, 0, size, size);
+          drawWheel();
+          showQuestion(selectedIndex);
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function showQuestion(index) {
+      const q = questions[index];
+      document.getElementById('questionBox').innerHTML = `<h3>${q.question}</h3>`;
+      let html = '';
+      q.choices.forEach((choice, i) => {
+        html += `<div class='choice' onclick='checkAnswer(${index}, ${i})'>${String.fromCharCode(65+i)}. ${choice}</div>`;
+      });
+      document.getElementById('choicesBox').innerHTML = html;
+      document.getElementById('result').innerText = '';
+    }
+
+    function checkAnswer(qIndex, answerIndex) {
+      const correct = questions[qIndex].correct;
+      const resultBox = document.getElementById('result');
+      if (answerIndex === correct) {
+        resultBox.innerText = "✅ Σωστή απάντηση!";
+        resultBox.style.color = "lime";
+        launchConfetti();
+      } else {
+        resultBox.innerText = "❌ Λάθος απάντηση.";
+        resultBox.style.color = "red";
+      }
+    }
+
+    function launchConfetti() {
+      const duration = 4000;
+      const end = Date.now() + duration;
+      (function frame() {
+        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 } });
+        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 } });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+    }
+
+    drawWheel();
+    document.getElementById('spin').addEventListener('click', spinWheel);
+  </script>
+</body>
+</html>
